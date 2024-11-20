@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --bubble-size: 33vmin;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .stage {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .bubble-wrapper {
+            position: absolute;
+            bottom: -50%;
+            will-change: transform, opacity;
+            opacity: 0;
+            visibility: visible;
+        }
+
+        .bubble {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            will-change: transform, opacity, filter, border-radius;
+            backdrop-filter: blur(5px);
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.05) 30%,
+                rgba(255, 255, 255, 0.1) 50%,
+                rgba(255, 255, 255, 0.2) 70%,
+                rgba(255, 255, 255, 0.3) 85%,
+                rgba(255, 255, 255, 0.5) 100%
+            );
+            box-shadow:
+                inset 0 0 20px rgba(255, 255, 255, 0.6),
+                inset 0 0 30px rgba(255, 255, 255, 0.4),
+                0 0 20px rgba(255, 255, 255, 0.5);
+            transform: translate3d(0, 0, 0);
+            animation: morphShape 20s ease-in-out infinite;
+            mix-blend-mode: screen;
+            cursor: pointer;
+        }
+
+        .bubble-iridescent {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    overflow: hidden;
+    background: radial-gradient(
+        circle at center,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 0, 255, 0.2) 40%,
+        rgba(0, 255, 255, 0.2) 60%,
+        rgba(148, 0, 211, 0.2) 80%,
+        rgba(255, 255, 255, 0.1) 100%
+    );
+    background-size: 200% 200%;
+    animation: iridescent 45s ease-in-out infinite;
+    mix-blend-mode: color-dodge;
+}
+
+        @keyframes morphShape {
+            0%, 100% {
+                border-radius: 40% 60% 55% 45% / 45% 55% 50% 50%;
+            }
+            25% {
+                border-radius: 50% 55% 45% 60% / 55% 50% 60% 45%;
+            }
+            50% {
+                border-radius: 60% 50% 50% 55% / 50% 60% 45% 55%;
+            }
+            75% {
+                border-radius: 55% 45% 60% 50% / 60% 45% 55% 50%;
+            }
+        }
+
+        @keyframes iridescent {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Updated styles for particles */
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            will-change: transform, opacity;
+        }
+    </style>
+</head>
+<body>
+    <div class="stage">
+        <!-- No changes needed here -->
+    </div>
+    <script>
+        class BubbleSystem {
+            constructor() {
+                this.stage = document.querySelector('.stage');
+                if (!this.stage) {
+                    console.error('Stage element not found. Make sure the HTML contains a div with class "stage".');
+                    return;
+                }
+                this.bubbles = [];
+                this.maxBubbles = 7;
+                this.lastBubbleTime = 0;
+                this.bubbleInterval = 8500;
+                this.init();
+            }
+
+            init() {
+                this.animate = this.animate.bind(this);
+                this.createBubble();
+                requestAnimationFrame(() => this.animate(performance.now()));
+            }
+
+            createBubble() {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bubble-wrapper';
+
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+
+                const iridescent = document.createElement('div');
+                iridescent.className = 'bubble-iridescent';
+                bubble.appendChild(iridescent);
+
+                wrapper.appendChild(bubble);
+
+                // Randomize bubble size
+                const baseSize = 33; // Base size in vmin
+                const sizeFactor = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+                const size = baseSize * sizeFactor;
+                wrapper.style.width = `${size}vmin`;
+                wrapper.style.height = `${size}vmin`;
+
+                // Calculate bubble size in pixels
+                const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
+                const bubbleSizePx = size * vmin;
+
+                // Randomize left position within valid range
+                const maxLeft = window.innerWidth - bubbleSizePx;
+                const left = Math.random() * maxLeft;
+                wrapper.style.left = `${left}px`;
+
+                // Randomize bubble shape
+                const scaleX = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+                const scaleY = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+
+                bubble.style.transform = `scale(${scaleX}, ${scaleY})`;
+
+                // Position and set animation attributes
+                wrapper.dataset.startTime = performance.now();
+                const duration = 45000 + Math.random() * 10000;
+                wrapper.dataset.duration = duration;
+
+                // Set minimal amplitude for horizontal movement
+                const amplitude = 2 + Math.random() * 3; // Between 2 and 5 pixels
+                wrapper.dataset.amplitude = amplitude;
+
+                // Randomize frequency for horizontal movement
+                wrapper.dataset.frequency = 18000 + Math.random() * 3000;
+
+                // Add click event listener to the bubble
+                bubble.addEventListener('click', () => this.popBubble(wrapper));
+
+                this.stage.appendChild(wrapper);
+                this.bubbles.push(wrapper);
+
+                requestAnimationFrame(() => {
+                    wrapper.style.visibility = 'visible';
+                    wrapper.style.transition = 'opacity 5s ease-in';
+                    wrapper.style.opacity = '1';
+                });
+
+                return wrapper;
+            }
+
+            popBubble(wrapper) {
+                // Remove the bubble from the wrapper
+                const bubble = wrapper.querySelector('.bubble');
+                if (bubble) {
+                    bubble.remove();
+                }
+                // Remove the bubble from the bubbles array
+                this.bubbles = this.bubbles.filter(b => b !== wrapper);
+                // Create particles
+                this.createParticles(wrapper);
+            }
+
+            createParticles(wrapper) {
+                const numParticles = 100; // Increased from 20 to 100
+                const particles = [];
+                const rect = wrapper.getBoundingClientRect();
+                const bubbleSize = rect.width;
+                const bubbleRadius = bubbleSize / 2;
+                const bubbleX = rect.left + bubbleRadius;
+                const bubbleY = rect.top + bubbleRadius;
+                const particleSize = 3; // Particle size in pixels
+
+                for (let i = 0; i < numParticles; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+
+                    // Generate a random angle
+                    const angle = Math.random() * 2 * Math.PI;
+
+                    // Generate a random radius between 80% and 100% of the bubble radius
+                    const radius = bubbleRadius * (0.8 + Math.random() * 0.2);
+
+                    // Calculate the initial position near the edge of the bubble
+                    const x = bubbleX + radius * Math.cos(angle) - particleSize / 2;
+                    const y = bubbleY + radius * Math.sin(angle) - particleSize / 2;
+
+                    // Position the particle
+                    particle.style.left = `${x}px`;
+                    particle.style.top = `${y}px`;
+
+                    // Append to stage
+                    this.stage.appendChild(particle);
+                    // Animate the particle
+                    this.animateParticle(particle, angle);
+                    particles.push(particle);
+                }
+
+                // Remove particles after animation
+                setTimeout(() => {
+                    particles.forEach(p => p.remove());
+                    // Remove the wrapper after particles are removed
+                    wrapper.remove();
+                }, 1000); // Animation duration is 1 second
+            }
+
+            animateParticle(particle, angle) {
+                // Random distance for particles to move outward
+                const distance = 50 + Math.random() * 50; // Particles move between 50 and 100 pixels
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance;
+                // Set initial opacity
+                particle.style.opacity = '1';
+                // Animate using CSS transitions
+                particle.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
+                requestAnimationFrame(() => {
+                    particle.style.transform = `translate(${x}px, ${y}px)`;
+                    particle.style.opacity = '0';
+                });
+            }
+
+            animate(timestamp) {
+                if (!this.stage) return;
+
+                if (timestamp - this.lastBubbleTime > this.bubbleInterval &&
+                    this.bubbles.length < this.maxBubbles) {
+                    this.createBubble();
+                    this.lastBubbleTime = timestamp;
+                }
+
+                this.bubbles = this.bubbles.filter(wrapper => {
+                    const rect = wrapper.getBoundingClientRect();
+                    const startTime = parseFloat(wrapper.dataset.startTime);
+                    const duration = parseFloat(wrapper.dataset.duration);
+                    const elapsed = timestamp - startTime;
+                    const progress = elapsed / duration;
+
+                    if (rect.bottom < -rect.height) {
+                        wrapper.style.transition = 'opacity 3s ease-out';
+                        wrapper.style.opacity = '0';
+                        setTimeout(() => wrapper.remove(), 3000);
+                        return false;
+                    }
+
+                    const translateY = -progress * (window.innerHeight + rect.height * 2);
+                    const amplitude = parseFloat(wrapper.dataset.amplitude);
+                    const frequency = parseFloat(wrapper.dataset.frequency);
+                    const horizontalOffset = Math.sin(elapsed / frequency * 2 * Math.PI) * amplitude;
+
+                    wrapper.style.transform = `translate(${horizontalOffset}px, ${translateY}px)`;
+
+                    return true;
+                });
+
+                requestAnimationFrame(this.animate);
+            }
+        }
+
+        window.addEventListener('load', () => new BubbleSystem());
+    </script>
+</body>
+</html>
